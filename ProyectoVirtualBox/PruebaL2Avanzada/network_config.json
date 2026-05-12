@@ -1,0 +1,20 @@
+{
+  "Switch-S1": {
+    "ip": "192.168.200.11",
+    "ports": [
+      {"net": "interna_S1_S2", "vlan": "trunk"},
+      {"net": "interna_S1_G2", "vlan": "10"},
+      {"net": "interna_S1_G3", "vlan": "20"},
+      {"net": "interna_S1_G4", "vlan": "10"}
+    ]
+  },
+  "Switch-S2": {
+    "ip": "192.168.200.12",
+    "ports": [
+      {"net": "interna_S1_S2", "vlan": "trunk"},
+      {"net": "interna_S2_G2", "vlan": "10"},
+      {"net": "interna_S2_G3", "vlan": "20"},
+      {"net": "interna_S2_G4", "vlan": "10"}
+    ]
+  }
+}

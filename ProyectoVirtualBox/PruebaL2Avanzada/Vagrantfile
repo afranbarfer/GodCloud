@@ -1,0 +1,143 @@
+require 'json'
+
+# Leemos el archivo de configuración JSON
+config_file = File.read('network_config.json')
+network_data = JSON.parse(config_file)
+
+# Desactiva la carpeta compartida por defecto (que no necesitas para un switch)
+Vagrant.configure("2") do |config|
+  config.vm.synced_folder ".", "/vagrant", disabled: true
+  network_data.each do |hostname, info|
+    config.vm.define hostname do |s|
+      s.vm.box = "ubuntu/jammy64"
+      s.vm.hostname = hostname
+
+      # Creamos los 8 adaptadores de red interna (del 2 al 9 en VirtualBox)
+      info['ports'].each do |port|
+        s.vm.network "private_network", virtualbox__intnet: port['net'], auto_config: false
+      end
+
+      s.vm.provider "virtualbox" do |vb|
+        vb.name = hostname
+        vb.memory = 512
+        vb.cpus = 1
+        vb.gui = false
+        # Modo promiscuo vital para que el Switch L2 funcione
+        (2..9).each { |n| vb.customize ["modifyvm", :id, "--nicpromisc#{n}", "allow-all"] }
+      end
+
+      # Provisionamiento mediante Shell Script
+      s.vm.provision "shell", env: {"NET_DATA" => info.to_json}, inline: <<-SHELL
+        set -e
+        
+        echo ">>> [1/5] Configurando teclado (ES)..."
+        sed -i 's/XKBLAYOUT="us"/XKBLAYOUT="es"/' /etc/default/keyboard
+        udevadm trigger --subsystem-match=input --action=change || true
+
+        echo ">>> [2/5] Instalando dependencias (OVS y JQ)..."
+        export DEBIAN_FRONTEND=noninteractive
+        apt-get update -y
+        apt-get install -y openvswitch-switch jq
+
+        echo ">>> [3/5] Generando configuración persistente de Netplan..."
+
+        # Detectamos interfaces L2
+        IFACES=$(ip -o link show | awk -F': ' '{print $2}' | grep enp0s | grep -v enp0s3 | sort -V)
+
+        IP_SW=$(echo $NET_DATA | jq -r ".ip")
+        VLAN_MGMT="99"
+
+        # Extraer VLANs dinámicas
+        VLANS_DINAMICAS=$(echo $NET_DATA | jq -r '.ports[].vlan | select(type == "number" or (type == "string" and test("^[0-9]+$")))' | sort -un | paste -sd "," -)
+
+        ALL_VLANS=$(echo "$VLANS_DINAMICAS,$VLAN_MGMT" | sed 's/^,//')
+
+        # Empezamos el archivo Netplan limpio
+        cat <<EOF > /etc/netplan/01-netcfg.yaml
+network:
+  version: 2
+  ethernets:
+    enp0s3:
+      dhcp4: true
+EOF
+
+        # Añadimos interfaces físicas
+        for IFACE in $IFACES; do
+          cat <<EOF >> /etc/netplan/01-netcfg.yaml
+    ${IFACE}:
+      dhcp4: no
+      optional: true
+EOF
+        done
+
+        chmod 600 /etc/netplan/01-netcfg.yaml
+        netplan apply || true
+
+        echo ">>> [4/5] Configurando Open vSwitch (OVS)..."
+
+        ovs-vsctl --if-exists del-br br0
+
+        ovs-vsctl add-br br0
+        ovs-vsctl set bridge br0 rstp_enable=true
+        ovs-vsctl set bridge br0 fail-mode=standalone
+
+        # Crear interfaz interna de gestión
+        ovs-vsctl --may-exist add-port br0 vlan${VLAN_MGMT} tag=${VLAN_MGMT} -- set interface vlan${VLAN_MGMT} type=internal
+
+        sleep 1
+
+        ip link set vlan${VLAN_MGMT} up
+        ip addr add ${IP_SW}/24 dev vlan${VLAN_MGMT} || true
+
+        i=0
+        for IFACE in $IFACES; do
+
+          VLAN=$(echo $NET_DATA | jq -r ".ports[$i].vlan")
+          
+          ip link set $IFACE up
+          
+          if [ "$VLAN" = "trunk" ]; then
+          
+            echo "   + Configurando $IFACE como TRUNK (VLANs: $ALL_VLANS)"
+            
+            ovs-vsctl --may-exist add-port br0 $IFACE vlan_mode=trunk trunks=$ALL_VLANS
+            ovs-vsctl set port $IFACE other_config:rstp-port-admin-edge=true
+            
+          elif [ "$VLAN" != "none" ] && [ "$VLAN" != "null" ]; then
+          
+            echo "   + Configurando $IFACE en VLAN de ACCESO: $VLAN (PortFast ON)"
+            
+            ovs-vsctl --may-exist add-port br0 $IFACE tag=$VLAN
+            ovs-vsctl set port $IFACE other_config:rstp-port-admin-edge=true
+            
+          fi
+          
+          i=$((i+1))
+
+        done
+
+        echo ">>> [5/5] Instalando comandos de gestión globales..."
+
+        cat <<'EOF' | sudo tee /etc/profile.d/ovs_aliases.sh
+
+alias sw-conf='ovs-vsctl'
+alias sw-status='ovs-vsctl show'
+alias sw-vlans='ovs-appctl dpctl/show'
+alias sw-macs='ovs-appctl fdb/show br0'
+alias sw-stp='ovs-vsctl list port | grep -E "name|rstp_status"'
+alias sw-ip='ip -br addr show dev vlan99'
+
+EOF
+
+        sudo chmod +x /etc/profile.d/ovs_aliases.sh
+
+        echo "source /etc/profile.d/ovs_aliases.sh" >> /etc/bash.bashrc
+
+        ip link set br0 up
+        ip link set vlan${VLAN_MGMT} up
+        
+        echo "INSTALACIÓN COMPLETADA EN $HOSTNAME: IP ${IP_SW} en VLAN ${VLAN_MGMT}"
+      SHELL
+    end
+  end
+end
