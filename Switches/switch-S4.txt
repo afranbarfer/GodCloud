@@ -1,0 +1,44 @@
+! --- Entrar en modo Admin ---
+Switch-S4> enable
+! --- Entrar en la VLAN database ---
+Switch-S4# vlan database
+! --- Añadir las vlans en la database---
+Switch-S4(vlan)# vlan 10 name SERVICIOS
+Switch-S4(vlan)# vlan 99 name GESTION
+Switch-S4(vlan)# exit
+Switch-S4# configure terminal
+! --- Trunk hacia S1 ---
+Switch-S4(config)# interface f0/0
+Switch-S4(config-if)# description Trunk_a_S1
+Switch-S4(config-if)# switchport mode trunk
+Switch-S4(config-if)# switchport trunk allowed vlan 1,10,99,1002-1005
+Switch-S4(config-if)# no shutdown
+
+! --- Trunk hacia S2 ---
+Switch-S4(config)# interface f0/1
+Switch-S4(config-if)# description Trunk_a_S2
+Switch-S4(config-if)# switchport mode trunk
+Switch-S4(config-if)# switchport trunk allowed vlan 1,10,99,1002-1005
+Switch-S4(config-if)# no shutdown
+
+! --- Trunk hacia R1 ---
+Switch-S4(config)# interface f0/2
+Switch-S4(config-if)# description Trunk_a_R1
+Switch-S4(config-if)# switchport mode trunk
+Switch-S4(config-if)# switchport trunk allowed vlan 1,10,99,1002-1005
+Switch-S4(config-if)# no shutdown
+
+! --- Trunk hacia R2 ---
+Switch-S4(config)# interface f0/3
+Switch-S4(config-if)# description Trunk_a_R2
+Switch-S4(config-if)# switchport mode trunk
+Switch-S4(config-if)# switchport trunk allowed vlan 1,10,99,1002-1005
+Switch-S4(config-if)# no shutdown
+
+! --- IP de Gestión ---
+Switch-S4(config)# interface vlan 99
+Switch-S4(config-if)# ip address 192.168.99.14 255.255.255.224
+Switch-S4(config-if)# no shutdown
+
+! --- Guardar Configuración ---
+Switch-S4# copy running-config startup-config

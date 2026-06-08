@@ -1,0 +1,53 @@
+! --- Entrar en modo Admin ---
+Switch-S5> enable
+! --- Entrar en la VLAN database ---
+Switch-S5# vlan database
+! --- Añadir las vlans en la database---
+Switch-S5(vlan)# vlan 10 name SERVICIOS
+Switch-S5(vlan)# vlan 99 name GESTION
+Switch-S5(vlan)# exit
+Switch-S5# configure terminal
+! --- Trunk hacia S1 ---
+Switch-S5(config)# interface f0/0
+Switch-S5(config-if)# description Trunk_a_S1
+Switch-S5(config-if)# switchport mode trunk
+Switch-S5(config-if)# switchport trunk allowed vlan 1,10,99,1002-1005
+Switch-S5(config-if)# no shutdown
+
+! --- Trunk hacia S2 ---
+Switch-S5(config)# interface f0/1
+Switch-S5(config-if)# description Trunk_a_S2
+Switch-S5(config-if)# switchport mode trunk
+Switch-S5(config-if)# switchport trunk allowed vlan 1,10,99,1002-1005
+Switch-S5(config-if)# no shutdown
+
+! --- Trunk hacia S3 ---
+Switch-S5(config)# interface f0/2
+Switch-S5(config-if)# description Trunk_a_S3
+Switch-S5(config-if)# switchport mode trunk
+Switch-S5(config-if)# switchport trunk allowed vlan 1,10,99,1002-1005
+Switch-S5(config-if)# no shutdown
+
+! --- Trunk hacia R1 ---
+Switch-S5(config)# interface f0/3
+Switch-S5(config-if)# description Trunk_a_R1
+Switch-S5(config-if)# switchport mode trunk
+Switch-S5(config-if)# switchport trunk allowed vlan 1,10,99,1002-1005
+Switch-S5(config-if)# no shutdown
+
+! --- Trunk hacia R2 ---
+Switch-S5(config)# interface f0/4
+Switch-S5(config-if)# description Trunk_a_R2
+Switch-S5(config-if)# switchport mode trunk
+Switch-S5(config-if)# switchport trunk allowed vlan 1,10,99,1002-1005
+Switch-S5(config-if)# no shutdown
+
+! --- IP de Gestión y Prioridad en el STP ---
+Switch-S5(config)# interface vlan 99
+Switch-S5(config-if)# ip address 192.168.99.15 255.255.255.224
+Switch-S5(config-if)# no shutdown
+Switch-S5(config)# spanning-tree vlan 10 priority 4096
+Switch-S5(config)# spanning-tree vlan 99 priority 4096
+
+! --- Guardar Configuración ---
+Switch-S5# copy running-config startup-config

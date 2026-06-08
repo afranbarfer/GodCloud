@@ -1,0 +1,44 @@
+! --- Entrar en modo Admin ---
+Switch-S6> enable
+! --- Entrar en la VLAN database ---
+Switch-S6# vlan database
+! --- Añadir las vlans en la database---
+Switch-S6(vlan)# vlan 10 name SERVICIOS
+Switch-S6(vlan)# vlan 99 name GESTION
+Switch-S6(vlan)# exit
+Switch-S6# configure terminal
+! --- Trunk hacia S2 ---
+Switch-S6(config)# interface f0/0
+Switch-S6(config-if)# description Trunk_a_S2
+Switch-S6(config-if)# switchport mode trunk
+Switch-S6(config-if)# switchport trunk allowed vlan 1,10,99,1002-1005
+Switch-S6(config-if)# no shutdown
+
+! --- Trunk hacia S3 ---
+Switch-S6(config)# interface f0/1
+Switch-S6(config-if)# description Trunk_a_S3
+Switch-S6(config-if)# switchport mode trunk
+Switch-S6(config-if)# switchport trunk allowed vlan 1,10,99,1002-1005
+Switch-S6(config-if)# no shutdown
+
+! --- Trunk hacia R1 ---
+Switch-S6(config)# interface f0/2
+Switch-S6(config-if)# description Trunk_a_R1
+Switch-S6(config-if)# switchport mode trunk
+Switch-S6(config-if)# switchport trunk allowed vlan 1,10,99,1002-1005
+Switch-S6(config-if)# no shutdown
+
+! --- Trunk hacia R2 ---
+Switch-S6(config)# interface f0/3
+Switch-S6(config-if)# description Trunk_a_R2
+Switch-S6(config-if)# switchport mode trunk
+Switch-S6(config-if)# switchport trunk allowed vlan 1,10,99,1002-1005
+Switch-S6(config-if)# no shutdown
+
+! --- IP de Gestión ---
+Switch-S6(config)# interface vlan 99
+Switch-S6(config-if)# ip address 192.168.99.16 255.255.255.224
+Switch-S6(config-if)# no shutdown
+
+! --- Guardar Configuración ---
+Switch-S6# copy running-config startup-config

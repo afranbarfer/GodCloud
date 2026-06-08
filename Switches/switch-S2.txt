@@ -1,0 +1,42 @@
+! --- Entrar en modo Admin ---
+Switch-S2> enable
+! --- Entrar en la VLAN database ---
+Switch-S2# vlan database
+! --- Añadir las vlans en la database---
+Switch-S2(vlan)# vlan 10 name SERVICIOS
+Switch-S2(vlan)# vlan 99 name GESTION
+Switch-S2(vlan)# exit
+Switch-S2(config)# interface f0/0
+Switch-S2(config-if)# description Trunk_a_S4
+Switch-S2(config-if)# switchport mode trunk
+Switch-S2(config-if)# switchport trunk allowed vlan 1,10,99,1002-1005
+Switch-S2(config-if)# no shutdown
+
+! --- Trunk hacia S5 ---
+Switch-S2(config)# interface f0/1
+Switch-S2(config-if)# description Trunk_a_S5
+Switch-S2(config-if)# switchport mode trunk
+Switch-S2(config-if)# switchport trunk allowed vlan 1,10,99,1002-1005
+Switch-S2(config-if)# no shutdown
+
+! --- Trunk hacia S6 ---
+Switch-S2(config)# interface f0/2
+Switch-S2(config-if)# description Trunk_a_S6
+Switch-S2(config-if)# switchport mode trunk
+Switch-S2(config-if)# switchport trunk allowed vlan 1,10,99,1002-1005
+Switch-S2(config-if)# no shutdown
+
+! --- Interfaces de Servicios ---
+Switch-S2(config)# interface range f0/3 - 15
+Switch-S2(config-if-range)# switchport mode access
+Switch-S2(config-if-range)# switchport access vlan 10
+Switch-S2(config-if-range)# no shutdown
+
+! --- IP de Gestión ---
+Switch-S2(config)# interface vlan 99
+Switch-S2(config-if)# ip address 192.168.99.12 255.255.255.224
+Switch-S2(config-if)# no shutdown
+
+
+! --- Guardar Configuración ---
+Switch-S2# copy running-config startup-config
