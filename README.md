@@ -3,6 +3,8 @@ Proyecto de 2º ASIR en el IES Triana, curso 2025/26.
 
 Alumno: Francisco Javier Barea Fernández
 
+## ARCHIVO DE GNS3 EN DRIVE [ENLACE](https://drive.google.com/drive/folders/1eVFOyh06Z28r7dXFYneUc4GsMr_w4zFH?usp=sharing)
+
 
 # OBJETIVO GENERAL DEL PROYECTO
 Diseñar, implementar y verificar una infraestructura de red empresarial de alta disponibilidad en un entorno virtualizado, demostrando que es posible eliminar los puntos únicos de fallo en todas las capas de la arquitectura mediante el uso de protocolos estándar de la industria.
